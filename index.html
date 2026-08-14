@@ -8,18 +8,43 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <style>
-  /* Ajuste para o texto de identificação ficar bem formatado e com espaçamento correto */
+  /* ---------- ESTILOS ESTÉTICOS DA CAIXA DE TEXTO ---------- */
   .hero-sub-caixa {
     font-size: 1.05rem;
-    line-height: 1.55;
+    line-height: 1.6;
     color: var(--paper-dim);
     margin: 0 auto 1.75rem;
-    max-width: 540px;
+    max-width: 620px;
     text-align: center;
   }
-  .hero-sub-caixa p { margin: 0 0 1rem 0; }
+  .hero-sub-caixa p { margin: 0 0 1.1rem 0; }
   .hero-sub-caixa p:last-child { margin: 0; }
-  .hero-sub-caixa strong { color: var(--gold-soft); font-weight: 700; }
+  .hero-sub-caixa strong { color: var(--paper); font-weight: 700; }
+  
+  .premio-principal { font-size: 1.25rem; color: var(--gold-soft); }
+  .premio-principal strong { color: var(--gold); font-family: var(--font-display); letter-spacing: 0.05em; }
+  .texto-ouro { color: var(--gold) !important; }
+  
+  /* Novos destaques visuais */
+  .destaque-box {
+    background: rgba(212, 169, 79, 0.1);
+    border: 1px dashed var(--gold-soft);
+    padding: 0.9rem;
+    border-radius: 8px;
+    margin: 1.25rem 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  }
+  .destaque-data {
+    color: var(--gold);
+    font-weight: 700;
+  }
+  .agradecimento {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--paper);
+    letter-spacing: 0.03em;
+    margin-top: 1rem !important;
+  }
 </style>
 </head>
 <body>
@@ -35,13 +60,19 @@
     <p class="eyebrow">🌎 Sorteio Solidário</p>
     <h1 id="raffle-title">Escolha seu número<br>da sorte</h1>
     
-    <!-- NOVO TEXTO DE IDENTIFICAÇÃO AQUI -->
+    <!-- TEXTO DE IDENTIFICAÇÃO COM ÊNFASE VISUAL -->
     <div class="hero-sub-caixa">
-      <p>Concorra a um <strong>PIX de R$ 1.000,00!</strong></p>
-      <p>Olá! Sou Victor Branco, estudante de Ciências Biológicas na UFPB. Tive um artigo aprovado para o III Seminário de Educação Ambiental Superior na América Latina e Caribe, que esse ano acontecerá no México 🇲🇽 e estou fazendo esta rifa para ajudar nos custos da viagem.</p>
+      <p class="premio-principal">Concorra a um <strong>PIX de R$ 1.000,00!</strong></p>
+      
+      <p>Olá! Sou <strong>Victor Branco</strong>, estudante de Ciências Biológicas na UFPB. Fui aprovado para apresentar um artigo no <em>III Seminário de Educação Ambiental Superior na América Latina e Caribe</em>, que acontecerá no <strong class="texto-ouro">México 🇲🇽</strong> e estou fazendo esta rifa para ajudar nos custos da viagem.</p>
+      
       <p>🎟️ Participando, você contribui para que eu possa viver essa importante experiência acadêmica.</p>
-      <p> O sorteio acontecerá no dia 31/10/2026.
-      <p>Conto com seu apoio! 💙🧬</p>
+      
+      <div class="destaque-box">
+        <p>📅 O sorteio acontecerá dia <span class="destaque-data">25/10/2026</span>, data que será divulgado também o/a maior apoiador/a.</p>
+      </div>
+      
+      <p class="agradecimento">Conto com seu apoio! 💙🧬</p>
     </div>
 
     <div class="hero-stats">
@@ -97,7 +128,7 @@
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
     <button class="modal-close" id="modal-close" aria-label="Fechar">&times;</button>
     <div id="etapa-dados">
-      <p class="modal-eyebrow">Você está reservando o número</p>
+      <p class="modal-eyebrow">Você está reservando o(s) número(s):</p>
       <p class="modal-number" id="modal-number">0000</p>
       <p class="modal-preco" id="modal-preco"></p>
       <label for="name-input">Seu nome</label>
@@ -119,10 +150,9 @@
   </div>
 </div>
 
-<!-- Firebase SDK (compat, mais simples de usar direto no navegador) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-    <textarea id="copia-cola-hidden" readonly class="visually-hidden"></textarea>
+<textarea id="copia-cola-hidden" readonly class="visually-hidden"></textarea>
 <script src="firebase-config.js"></script>
 <script src="app.js"></script>
 </body>

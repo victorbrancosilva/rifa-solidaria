@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escplha seu número, concorra ao prêmio e me ajude a ir apresentar meu trabalho no México! </title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="ticket-hero">
+  <div class="perf perf-top" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <p class="eyebrow">Rifa Solidária - Viagem ao México</p>
+    <h1 id="raffle-title">Sorteio de um PIX no valor de R$ 1000,00 e R$ 200,00 para o maior apoiador!</h1>
+    <p class="hero-sub">Escolha o seu número da sorte, reserve com seu nome e aguarde o dia do sorteio.</p>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-num" id="stat-total">5000</span>
+        <span class="stat-label">números</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="stat-taken">0</span>
+        <span class="stat-label">reservados</span>
+      </div>
+      <div class="stat">
+        <span class="stat-num" id="stat-free">5000</span>
+        <span class="stat-label">livres</span>
+      </div>
+    </div>
+  </div>
+  <div class="perf perf-bottom" aria-hidden="true"></div>
+</header>
+
+<main>
+  <section class="controls" aria-label="Buscar número">
+    <div class="search-box">
+      <input type="number" id="search-input" min="1" max="5000" placeholder="Pular para o número...">
+      <button id="search-btn" type="button">Ir</button>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><i class="chip chip-free"></i> Livre</span>
+      <span class="legend-item"><i class="chip chip-mine"></i> Seu</span>
+      <span class="legend-item"><i class="chip chip-taken"></i> Pago</span>
+      <span class="legend-item"><i class="chip chip-pendente"></i> Aguardando Pix</span>
+    </div>
+  </section>
+
+  <p id="status-msg" class="status-msg" role="status"></p>
+
+  <section id="grid" class="grid" aria-label="Grade de números do sorteio">
+    <p class="loading">Carregando números...</p>
+  </section>
+</main>
+
+<footer>
+  <p>Feito para o sorteio &mdash; boa sorte! 🍀</p>
+</footer>
+
+<!-- Modal de reserva -->
+<div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <button class="modal-close" id="modal-close" aria-label="Fechar">&times;</button>
+    <div id="etapa-dados">
+      <p class="modal-eyebrow">Você está reservando o número</p>
+      <p class="modal-number" id="modal-number">0000</p>
+      <p class="modal-preco" id="modal-preco"></p>
+      <label for="name-input">Seu nome</label>
+      <input type="text" id="name-input" maxlength="60" placeholder="Digite seu nome completo">
+      <label for="whatsapp-input">Seu WhatsApp (com DDD)</label>
+      <input type="tel" id="whatsapp-input" maxlength="16" placeholder="(11) 99999-9999">
+      <p class="modal-error" id="modal-error"></p>
+      <button class="modal-confirm" id="modal-confirm">Gerar Pix</button>
+    </div>
+
+    <div id="etapa-pix" class="hidden">
+      <p class="modal-eyebrow">Escaneie ou copie o código Pix</p>
+      <p class="modal-number modal-number-small" id="modal-number-pix">0000</p>
+      <img id="qr-image" alt="QR Code do Pix" class="qr-image">
+      <button id="btn-copiar" class="modal-secondary" type="button">Copiar código Pix</button>
+      <p class="pix-timer" id="pix-timer"></p>
+      <p class="pix-status" id="pix-status">Aguardando pagamento...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat, mais simples de usar direto no navegador) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+    <textarea id="copia-cola-hidden" readonly class="visually-hidden"></textarea>
+<script src="firebase-config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
+

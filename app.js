@@ -1,8 +1,5 @@
 // ============================================================
-// SORTEIO — lógica do site (com pagamento Pix via Mercado Pago)
-// Estrutura no Firestore:
-//   coleção "sorteio" > documento "reservas" > campo "numeros"
-//   { "1": { nome, whatsapp, status: "pendente"|"pago", paymentId, criadoEm }, ... }
+// SORTEIO — lógica do site (MÚLTIPLOS NÚMEROS)
 // ============================================================
 
 const TOTAL_NUMEROS = 5000;
@@ -32,8 +29,8 @@ const copiaColaHidden = document.getElementById("copia-cola-hidden");
 const pixTimer = document.getElementById("pix-timer");
 const pixStatus = document.getElementById("pix-status");
 
-let reservas = {}; // cache local do Firestore
-let numeroSelecionado = null;
+let reservas = {}; 
+let selecionados = new Set(); // Substitui a variável antiga por uma lista de selecionados
 let cronometro = null;
 let listenerPagamento = null;
 
@@ -41,6 +38,63 @@ const meusNumeros = new Set(JSON.parse(localStorage.getItem("meusNumeros") || "[
 function salvarMeuNumero(num) {
   meusNumeros.add(String(num));
   localStorage.setItem("meusNumeros", JSON.stringify([...meusNumeros]));
+}
+
+// ---------- INJEÇÃO DA BARRA DE CHECKOUT DINÂMICA ----------
+const style = document.createElement("style");
+style.innerHTML = `
+  .num-btn.selecionado {
+    background: var(--gold-soft);
+    border-color: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(212,169,79,0.35);
+  }
+  .checkout-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: var(--ink); color: var(--paper);
+    padding: 1rem 1.5rem;
+    display: flex; justify-content: space-between; align-items: center;
+    z-index: 100;
+    transform: translateY(100%); transition: transform 0.3s ease-out;
+    box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+  }
+  .checkout-bar.visible { transform: translateY(0); }
+  #checkout-text { font-family: var(--font-mono); font-size: 0.95rem; }
+  #checkout-btn {
+    background: var(--gold); color: var(--ink); border: none;
+    padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: 700;
+    cursor: pointer; font-family: var(--font-body);
+  }
+  #checkout-btn:hover { background: var(--gold-soft); }
+  @media (max-width: 480px) {
+    .checkout-bar { flex-direction: column; gap: 0.75rem; text-align: center; }
+    #checkout-btn { width: 100%; }
+  }
+`;
+document.head.appendChild(style);
+
+const checkoutBar = document.createElement("div");
+checkoutBar.className = "checkout-bar";
+checkoutBar.innerHTML = `
+  <span id="checkout-text">0 números - R$ 0,00</span>
+  <button id="checkout-btn">Pagar Reservas</button>
+`;
+document.body.appendChild(checkoutBar);
+
+const checkoutText = document.getElementById("checkout-text");
+const checkoutBtn = document.getElementById("checkout-btn");
+
+// Altera o texto do modal para refletir o plural
+document.querySelector('.modal-eyebrow').textContent = "Você está reservando o(s) número(s):";
+
+function atualizarBarraCheckout() {
+  if (selecionados.size > 0) {
+    checkoutBar.classList.add("visible");
+    const total = selecionados.size * PRECO_NUMERO;
+    checkoutText.textContent = `${selecionados.size} número(s) - R$ ${total.toFixed(2).replace('.', ',')}`;
+  } else {
+    checkoutBar.classList.remove("visible");
+  }
 }
 
 // ---------- construir a grade ----------
@@ -66,7 +120,7 @@ function atualizarVisual() {
     const btn = document.getElementById("num-" + i);
     if (!btn) continue;
     const item = reservas[String(i)];
-    btn.classList.remove("taken", "mine", "pendente");
+    btn.classList.remove("taken", "mine", "pendente", "selecionado");
 
     if (item && item.status === "pago") {
       ocupados++;
@@ -82,7 +136,10 @@ function atualizarVisual() {
       btn.classList.add("pendente");
       btn.title = meusNumeros.has(String(i))
         ? "Aguardando seu pagamento..."
-        : "Aguardando pagamento de outra pessoa (pode liberar em instantes)";
+        : "Aguardando pagamento de outra pessoa";
+    } else if (selecionados.has(i)) {
+      btn.classList.add("selecionado");
+      btn.title = "Selecionado por você";
     } else {
       btn.title = "Disponível";
     }
@@ -101,6 +158,7 @@ function formatarWhatsapp(digitos) {
 
 function aoClicarNumero(num) {
   const item = reservas[String(num)];
+  
   if (item && item.status === "pago") {
     statusMsg.textContent = meusNumeros.has(String(num))
       ? `Número ${num} é seu! Pago como "${item.nome}".`
@@ -108,12 +166,40 @@ function aoClicarNumero(num) {
     return;
   }
   if (item && item.status === "pendente" && !meusNumeros.has(String(num))) {
-    statusMsg.textContent = `Número ${num} está com pagamento pendente de outra pessoa. Tente novamente em alguns minutos.`;
+    statusMsg.textContent = `Número ${num} está pendente. Tente novamente em alguns minutos.`;
     return;
   }
 
-  numeroSelecionado = num;
-  modalNumber.textContent = String(num).padStart(4, "0");
+  // Lógica de seleção múltipla
+  if (selecionados.has(num)) {
+    selecionados.delete(num); // Desmarca se já estava marcado
+  } else {
+    if (selecionados.size >= 50) {
+      statusMsg.textContent = "Você pode selecionar no máximo 50 números por vez.";
+      return;
+    }
+    selecionados.add(num); // Marca se estava livre
+    statusMsg.textContent = "";
+  }
+
+  atualizarVisual();
+  atualizarBarraCheckout();
+}
+
+// ---------- abrir modal para pagamento ----------
+checkoutBtn.addEventListener("click", () => {
+  if (selecionados.size === 0) return;
+  
+  const numsArray = Array.from(selecionados).sort((a,b) => a-b);
+  let displayNums = numsArray.map(n => String(n).padStart(4, "0")).join(", ");
+  
+  if (numsArray.length > 4) {
+    displayNums = `${numsArray.length} números selecionados`;
+  }
+  
+  modalNumber.textContent = displayNums;
+  modalPreco.textContent = `Total: R$ ${(numsArray.length * PRECO_NUMERO).toFixed(2).replace('.', ',')}`;
+  
   modalError.textContent = "";
   nameInput.value = "";
   whatsappInput.value = "";
@@ -121,11 +207,10 @@ function aoClicarNumero(num) {
   etapaPix.classList.add("hidden");
   modalOverlay.classList.remove("hidden");
   setTimeout(() => nameInput.focus(), 50);
-}
+});
 
 function fecharModal() {
   modalOverlay.classList.add("hidden");
-  numeroSelecionado = null;
   if (cronometro) clearInterval(cronometro);
   if (listenerPagamento) listenerPagamento();
 }
@@ -139,15 +224,13 @@ modalConfirm.addEventListener("click", async () => {
   const nome = nameInput.value.trim();
   const whatsappDigitos = whatsappInput.value.replace(/\D/g, "");
 
-  if (!nome) {
-    modalError.textContent = "Digite seu nome.";
-    return;
-  }
+  if (!nome) { modalError.textContent = "Digite seu nome."; return; }
   if (whatsappDigitos.length < 10 || whatsappDigitos.length > 11) {
-    modalError.textContent = "Digite um WhatsApp válido, com DDD.";
-    return;
+    modalError.textContent = "Digite um WhatsApp válido, com DDD."; return;
   }
-  if (numeroSelecionado === null) return;
+
+  const numsArray = Array.from(selecionados);
+  if (numsArray.length === 0) return;
 
   modalConfirm.disabled = true;
   modalConfirm.textContent = "Gerando Pix...";
@@ -157,8 +240,10 @@ modalConfirm.addEventListener("click", async () => {
     const resp = await fetch("/.netlify/functions/criarPagamento", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ numero: numeroSelecionado, nome, whatsapp: whatsappDigitos }),
+      // AGORA ENVIA A LISTA DE NÚMEROS (numerosSelecionados) PARA O BACKEND
+      body: JSON.stringify({ numerosSelecionados: numsArray, nome, whatsapp: whatsappDigitos }),
     });
+    
     const dados = await resp.json();
 
     if (!resp.ok) {
@@ -166,8 +251,8 @@ modalConfirm.addEventListener("click", async () => {
       return;
     }
 
-    salvarMeuNumero(numeroSelecionado);
-    mostrarPix(numeroSelecionado, dados);
+    numsArray.forEach(num => salvarMeuNumero(num));
+    mostrarPix(numsArray, dados);
   } catch (err) {
     console.error(err);
     modalError.textContent = "Erro de conexão. Tente novamente.";
@@ -178,11 +263,14 @@ modalConfirm.addEventListener("click", async () => {
 });
 
 // ---------- mostrar tela do QR code ----------
-function mostrarPix(numero, dados) {
+function mostrarPix(numerosArray, dados) {
   etapaDados.classList.add("hidden");
   etapaPix.classList.remove("hidden");
 
-  modalNumberPix.textContent = String(numero).padStart(4, "0");
+  let displayNums = numerosArray.map(n => String(n).padStart(4, "0")).join(", ");
+  if (numerosArray.length > 3) displayNums = `${numerosArray.length} números`;
+  
+  modalNumberPix.textContent = displayNums;
   qrImage.src = "data:image/png;base64," + dados.qrCodeBase64;
   copiaColaHidden.value = dados.copiaECola;
   pixStatus.textContent = "Aguardando pagamento...";
@@ -195,17 +283,21 @@ function mostrarPix(numero, dados) {
     atualizarCronometro(segundosRestantes);
     if (segundosRestantes <= 0) {
       clearInterval(cronometro);
-      pixStatus.textContent = "Tempo esgotado. Feche e escolha o número novamente.";
+      pixStatus.textContent = "Tempo esgotado. Feche e escolha novamente.";
     }
   }, 1000);
 
   if (listenerPagamento) listenerPagamento();
   listenerPagamento = docRef.onSnapshot((snap) => {
     const dadosDoc = snap.data();
-    const item = dadosDoc && dadosDoc.numeros ? dadosDoc.numeros[String(numero)] : null;
+    // Verifica o status do primeiro número da lista, já que todos mudam juntos
+    const item = dadosDoc && dadosDoc.numeros ? dadosDoc.numeros[String(numerosArray[0])] : null;
     if (item && item.status === "pago") {
-      pixStatus.textContent = "✅ Pagamento confirmado! Número garantido.";
+      pixStatus.textContent = "✅ Pagamento confirmado! Números garantidos.";
       clearInterval(cronometro);
+      selecionados.clear(); // Limpa as seleções atuais após o pagamento
+      atualizarBarraCheckout();
+      atualizarVisual();
     }
   });
 }
@@ -249,7 +341,7 @@ function buscarNumero() {
     } else if (item && item.status === "pendente") {
       statusMsg.textContent = `Número ${val} — pagamento pendente.`;
     } else {
-      statusMsg.textContent = `Número ${val} está livre.`;
+      statusMsg.textContent = `Número ${val} está livre. Clique nele para selecionar.`;
     }
   }
 }
@@ -262,13 +354,10 @@ docRef.onSnapshot(
   },
   (err) => {
     console.error(err);
-    statusMsg.textContent = "Não foi possível conectar ao banco de dados. Confira o firebase-config.js.";
+    statusMsg.textContent = "Não foi possível conectar ao banco de dados.";
   }
 );
 
 // ---------- iniciar ----------
 construirGrade();
 atualizarVisual();
-if (typeof PRECO_NUMERO !== "undefined") {
-  modalPreco.textContent = `Valor: R$ ${PRECO_NUMERO.toFixed(2).replace(".", ",")}`;
-}

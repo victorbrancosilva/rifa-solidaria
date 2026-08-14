@@ -20,8 +20,8 @@ exports.handler = async (event) => {
       /* corpo pode vir vazio em alguns eventos — tudo bem */
     }
 
-    const paymentIdRaw = params["data.id"] || (body.data && body.data.id);
-const paymentId = paymentIdRaw ? String(paymentIdRaw) : null;
+    const paymentId = params["data.id"] || (body.data && body.data.id);
+    if (!paymentId) return { statusCode: 200, body: "ok" }; // ignora notificações sem id
 
     // NUNCA confie no corpo do webhook — sempre busque o pagamento direto na API
     const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
@@ -38,22 +38,23 @@ const paymentId = paymentIdRaw ? String(paymentIdRaw) : null;
       await db.runTransaction(async (t) => {
         const snap = await t.get(docRef);
         const dados = snap.exists ? snap.data().numeros || {} : {};
-        if (dados[chave] && String(dados[chave].paymentId) === paymentId) {
-  delete dados[chave];
-  t.set(docRef, { numeros: dados }, { merge: true });
-        }
         
+        // CORREÇÃO: Convertendo paymentId para Number para garantir a validação de tipo ===
+        if (dados[chave] && dados[chave].paymentId === Number(paymentId)) {
+          dados[chave].status = "pago";
+          t.set(docRef, { numeros: dados }, { merge: true });
         }
       });
     } else if (["cancelled", "rejected", "refunded"].includes(info.status)) {
       await db.runTransaction(async (t) => {
         const snap = await t.get(docRef);
         const dados = snap.exists ? snap.data().numeros || {} : {};
-        if (dados[chave] && String(dados[chave].paymentId) === paymentId) {
-  delete dados[chave];
-  t.set(docRef, { numeros: dados }, { merge: true });
-
-    }
+        
+        // CORREÇÃO: Aplicando a mesma conversão Number() para o fluxo de cancelamento
+        if (dados[chave] && dados[chave].paymentId === Number(paymentId)) {
+          delete dados[chave];
+          t.set(docRef, { numeros: dados }, { merge: true });
+        }
       });
     }
 
@@ -63,4 +64,3 @@ const paymentId = paymentIdRaw ? String(paymentIdRaw) : null;
     return { statusCode: 200, body: "ok" }; // sempre 200, senão o MP fica reenviando
   }
 };
-

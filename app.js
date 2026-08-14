@@ -1,5 +1,5 @@
 // ============================================================
-// SORTEIO — lógica do site (MÚLTIPLOS NÚMEROS)
+// SORTEIO — lógica do site (MÚLTIPLOS NÚMEROS E EXPIRAÇÃO)
 // ============================================================
 
 const TOTAL_NUMEROS = 5000;
@@ -85,7 +85,8 @@ const checkoutText = document.getElementById("checkout-text");
 const checkoutBtn = document.getElementById("checkout-btn");
 
 // Altera o texto do modal para refletir o plural
-document.querySelector('.modal-eyebrow').textContent = "Você está reservando o(s) número(s):";
+const textoModal = document.querySelector('.modal-eyebrow');
+if (textoModal) textoModal.textContent = "Você está reservando o(s) número(s):";
 
 function atualizarBarraCheckout() {
   if (selecionados.size > 0) {
@@ -122,6 +123,9 @@ function atualizarVisual() {
     const item = reservas[String(i)];
     btn.classList.remove("taken", "mine", "pendente", "selecionado");
 
+    // Verifica se é um número pendente que já ultrapassou os 15 minutos
+    const expirou = item && item.status === "pendente" && (Date.now() - item.criadoEm > 15 * 60 * 1000);
+
     if (item && item.status === "pago") {
       ocupados++;
       if (meusNumeros.has(String(i))) {
@@ -131,7 +135,8 @@ function atualizarVisual() {
         btn.classList.add("taken");
         btn.title = "Pago — reservado por: " + item.nome;
       }
-    } else if (item && item.status === "pendente") {
+    } else if (item && item.status === "pendente" && !expirou) {
+      // Só pinta de amarelo se ainda estiver dentro do tempo
       ocupados++;
       btn.classList.add("pendente");
       btn.title = meusNumeros.has(String(i))
@@ -165,9 +170,13 @@ function aoClicarNumero(num) {
       : `Número ${num} já foi pago por: ${item.nome} (${formatarWhatsapp(item.whatsapp)})`;
     return;
   }
+  
   if (item && item.status === "pendente" && !meusNumeros.has(String(num))) {
-    statusMsg.textContent = `Número ${num} está pendente. Tente novamente em alguns minutos.`;
-    return;
+    const expirou = (Date.now() - item.criadoEm > 15 * 60 * 1000);
+    if (!expirou) {
+      statusMsg.textContent = `Número ${num} está pendente. Tente novamente em alguns minutos.`;
+      return;
+    }
   }
 
   // Lógica de seleção múltipla
@@ -361,3 +370,11 @@ docRef.onSnapshot(
 // ---------- iniciar ----------
 construirGrade();
 atualizarVisual();
+
+// ---------- gatilho invisível de limpeza ----------
+// Toda vez que alguém abre o site ou a cada 3 minutos com ele aberto,
+// o site solicita ao servidor que rode o arquivo liberarExpirados.js silenciosamente
+fetch("/.netlify/functions/liberarExpirados").catch(() => {});
+setInterval(() => {
+  fetch("/.netlify/functions/liberarExpirados").catch(() => {});
+}, 3 * 60 * 1000);

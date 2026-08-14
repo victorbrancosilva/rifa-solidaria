@@ -20,8 +20,8 @@ exports.handler = async (event) => {
       /* corpo pode vir vazio em alguns eventos — tudo bem */
     }
 
-    const paymentId = params["data.id"] || (body.data && body.data.id);
-    if (!paymentId) return { statusCode: 200, body: "ok" }; // ignora notificações sem id
+    const paymentIdRaw = params["data.id"] || (body.data && body.data.id);
+const paymentId = paymentIdRaw ? String(paymentIdRaw) : null;
 
     // NUNCA confie no corpo do webhook — sempre busque o pagamento direto na API
     const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
@@ -38,19 +38,22 @@ exports.handler = async (event) => {
       await db.runTransaction(async (t) => {
         const snap = await t.get(docRef);
         const dados = snap.exists ? snap.data().numeros || {} : {};
-        if (dados[chave] && dados[chave].paymentId === paymentId) {
-          dados[chave].status = "pago";
-          t.set(docRef, { numeros: dados }, { merge: true });
+        if (dados[chave] && String(dados[chave].paymentId) === paymentId) {
+  delete dados[chave];
+  t.set(docRef, { numeros: dados }, { merge: true });
+        }
+        
         }
       });
     } else if (["cancelled", "rejected", "refunded"].includes(info.status)) {
       await db.runTransaction(async (t) => {
         const snap = await t.get(docRef);
         const dados = snap.exists ? snap.data().numeros || {} : {};
-        if (dados[chave] && dados[chave].paymentId === paymentId) {
-          delete dados[chave];
-          t.set(docRef, { numeros: dados }, { merge: true });
-        }
+        if (dados[chave] && String(dados[chave].paymentId) === paymentId) {
+  delete dados[chave];
+  t.set(docRef, { numeros: dados }, { merge: true });
+
+    }
       });
     }
 

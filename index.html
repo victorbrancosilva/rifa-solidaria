@@ -7,6 +7,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+  /* Ajuste para o texto de identificação ficar bem formatado e com espaçamento correto */
+  .hero-sub-caixa {
+    font-size: 1.05rem;
+    line-height: 1.55;
+    color: var(--paper-dim);
+    margin: 0 auto 1.75rem;
+    max-width: 540px;
+    text-align: center;
+  }
+  .hero-sub-caixa p { margin: 0 0 1rem 0; }
+  .hero-sub-caixa p:last-child { margin: 0; }
+  .hero-sub-caixa strong { color: var(--gold-soft); font-weight: 700; }
+</style>
 </head>
 <body>
 
@@ -20,7 +34,15 @@
   <div class="hero-inner">
     <p class="eyebrow">🌎 Sorteio Solidário</p>
     <h1 id="raffle-title">Escolha seu número<br>da sorte</h1>
-    <p class="hero-sub">Concorra a um <strong>PIX de R$ 1.000,00</strong> e ainda me ajude a ir ao México apresentar meu trabalho no <strong>III Seminário de Educação Ambiental Superior da América Latina</strong>!</p>
+    
+    <!-- NOVO TEXTO DE IDENTIFICAÇÃO AQUI -->
+    <div class="hero-sub-caixa">
+      <p>Concorra a um <strong>PIX de R$ 1.000,00!</strong></p>
+      <p>Olá! Sou Victor Branco, estudante de Ciências Biológicas na UFPB. Fui selecionado para apresentar um trabalho em um congresso no México 🇲🇽 e estou fazendo esta rifa para ajudar nos custos da viagem.</p>
+      <p>🎟️ Participando, você contribui para que eu possa viver essa importante experiência acadêmica.</p>
+      <p>Conto com seu apoio! 💙🧬</p>
+    </div>
+
     <div class="hero-stats">
       <div class="stat">
         <span class="stat-num" id="stat-total">5000</span>
@@ -66,7 +88,7 @@
 </main>
 
 <footer>
-  <p>Obrigada por apoiar essa causa &mdash; boa sorte! 🍀🌎</p>
+  <p>Obrigado por apoiar essa causa &mdash; boa sorte! 🍀🌎</p>
 </footer>
 
 <!-- Modal de reserva -->

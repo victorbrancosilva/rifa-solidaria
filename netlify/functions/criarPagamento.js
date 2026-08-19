@@ -1,7 +1,7 @@
 const admin = require("firebase-admin");
 const { MercadoPagoConfig, Payment } = require("mercadopago");
 
-const PRECO_NUMERO = 2.0;
+const PRECO_NUMERO = 2.00;
 const MINUTOS_EXPIRACAO = 15;
 
 function inicializarFirebase() {

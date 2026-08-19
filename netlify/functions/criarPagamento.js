@@ -75,7 +75,7 @@ exports.handler = async (event) => {
     });
 
     const emailSintetico = `${whatsappDigitos}@sorteio-brinde.app`;
-    const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
+    const client = new MercadoPagoConfig({ accessToken: "APP_USR-6863463351667889-081412-3573fd4074c90472bfe75d4afca9e58c-321728277" });
     const payment = new Payment(client);
 
     // 2. Gera a cobrança Pix com o valor total somado

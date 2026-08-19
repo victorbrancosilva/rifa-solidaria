@@ -82,7 +82,7 @@ exports.handler = async (event) => {
     const resultado = await payment.create({
       body: {
         transaction_amount: valorTotal,
-        description: `Sorteio - ${numerosSelecionados.length} número(s)`,
+        description: `Apoio Acadêmico - ${numerosSelecionados.length} cota(s)`,
         payment_method_id: "pix",
         payer: { email: emailSintetico, first_name: nome },
         notification_url: `${process.env.URL}/.netlify/functions/webhookPagamento`

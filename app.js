@@ -16,6 +16,7 @@ const modalNumber = document.getElementById("modal-number");
 const modalPreco = document.getElementById("modal-preco");
 const modalError = document.getElementById("modal-error");
 const nameInput = document.getElementById("name-input");
+const emailInput = document.getElementById("email-input"); // <-- NOVO CAMPO DE EMAIL MAPEADO
 const whatsappInput = document.getElementById("whatsapp-input");
 const modalConfirm = document.getElementById("modal-confirm");
 const modalClose = document.getElementById("modal-close");
@@ -30,7 +31,7 @@ const pixTimer = document.getElementById("pix-timer");
 const pixStatus = document.getElementById("pix-status");
 
 let reservas = {}; 
-let selecionados = new Set(); // Substitui a variável antiga por uma lista de selecionados
+let selecionados = new Set();
 let cronometro = null;
 let listenerPagamento = null;
 
@@ -84,13 +85,14 @@ document.body.appendChild(checkoutBar);
 const checkoutText = document.getElementById("checkout-text");
 const checkoutBtn = document.getElementById("checkout-btn");
 
-// Altera o texto do modal para refletir o plural
 const textoModal = document.querySelector('.modal-eyebrow');
 if (textoModal) textoModal.textContent = "Você está reservando o(s) número(s):";
 
 function atualizarBarraCheckout() {
   if (selecionados.size > 0) {
     checkoutBar.classList.add("visible");
+    // Defina o PRECO_NUMERO aqui, caso não esteja definido globalmente em outro lugar
+    const PRECO_NUMERO = 5.00; // Ajuste para o valor real da sua cota
     const total = selecionados.size * PRECO_NUMERO;
     checkoutText.textContent = `${selecionados.size} número(s) - R$ ${total.toFixed(2).replace('.', ',')}`;
   } else {
@@ -123,7 +125,6 @@ function atualizarVisual() {
     const item = reservas[String(i)];
     btn.classList.remove("taken", "mine", "pendente", "selecionado");
 
-    // Verifica se é um número pendente que já ultrapassou os 15 minutos
     const expirou = item && item.status === "pendente" && (Date.now() - item.criadoEm > 15 * 60 * 1000);
 
     if (item && item.status === "pago") {
@@ -136,7 +137,6 @@ function atualizarVisual() {
         btn.title = "Pago — reservado por: " + item.nome;
       }
     } else if (item && item.status === "pendente" && !expirou) {
-      // Só pinta de amarelo se ainda estiver dentro do tempo
       ocupados++;
       btn.classList.add("pendente");
       btn.title = meusNumeros.has(String(i))
@@ -179,15 +179,14 @@ function aoClicarNumero(num) {
     }
   }
 
-  // Lógica de seleção múltipla
   if (selecionados.has(num)) {
-    selecionados.delete(num); // Desmarca se já estava marcado
+    selecionados.delete(num); 
   } else {
     if (selecionados.size >= 50) {
       statusMsg.textContent = "Você pode selecionar no máximo 50 números por vez.";
       return;
     }
-    selecionados.add(num); // Marca se estava livre
+    selecionados.add(num); 
     statusMsg.textContent = "";
   }
 
@@ -206,11 +205,13 @@ checkoutBtn.addEventListener("click", () => {
     displayNums = `${numsArray.length} números selecionados`;
   }
   
+  const PRECO_NUMERO = 5.00; // Ajuste para o valor real da sua cota
   modalNumber.textContent = displayNums;
   modalPreco.textContent = `Total: R$ ${(numsArray.length * PRECO_NUMERO).toFixed(2).replace('.', ',')}`;
   
   modalError.textContent = "";
   nameInput.value = "";
+  emailInput.value = ""; // <-- CAMPO DE EMAIL LIMPO
   whatsappInput.value = "";
   etapaDados.classList.remove("hidden");
   etapaPix.classList.add("hidden");
@@ -231,9 +232,17 @@ modalOverlay.addEventListener("click", (e) => {
 // ---------- gerar pagamento Pix ----------
 modalConfirm.addEventListener("click", async () => {
   const nome = nameInput.value.trim();
+  const email = emailInput.value.trim(); // <-- CAPTURA DO EMAIL
   const whatsappDigitos = whatsappInput.value.replace(/\D/g, "");
 
   if (!nome) { modalError.textContent = "Digite seu nome."; return; }
+  
+  // <-- NOVA VALIDAÇÃO DE EMAIL
+  if (!email || !email.includes('@')) { 
+    modalError.textContent = "Digite um e-mail válido."; 
+    return; 
+  }
+
   if (whatsappDigitos.length < 10 || whatsappDigitos.length > 11) {
     modalError.textContent = "Digite um WhatsApp válido, com DDD."; return;
   }
@@ -249,8 +258,8 @@ modalConfirm.addEventListener("click", async () => {
     const resp = await fetch("/.netlify/functions/criarPagamento", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // AGORA ENVIA A LISTA DE NÚMEROS (numerosSelecionados) PARA O BACKEND
-      body: JSON.stringify({ numerosSelecionados: numsArray, nome, whatsapp: whatsappDigitos }),
+      // <-- ENVIA O EMAIL NO CORPO DA REQUISIÇÃO
+      body: JSON.stringify({ numerosSelecionados: numsArray, nome, email, whatsapp: whatsappDigitos }),
     });
     
     const dados = await resp.json();
@@ -299,12 +308,11 @@ function mostrarPix(numerosArray, dados) {
   if (listenerPagamento) listenerPagamento();
   listenerPagamento = docRef.onSnapshot((snap) => {
     const dadosDoc = snap.data();
-    // Verifica o status do primeiro número da lista, já que todos mudam juntos
     const item = dadosDoc && dadosDoc.numeros ? dadosDoc.numeros[String(numerosArray[0])] : null;
     if (item && item.status === "pago") {
       pixStatus.textContent = "✅ Pagamento confirmado! Números garantidos.";
       clearInterval(cronometro);
-      selecionados.clear(); // Limpa as seleções atuais após o pagamento
+      selecionados.clear(); 
       atualizarBarraCheckout();
       atualizarVisual();
     }
@@ -372,8 +380,6 @@ construirGrade();
 atualizarVisual();
 
 // ---------- gatilho invisível de limpeza ----------
-// Toda vez que alguém abre o site ou a cada 3 minutos com ele aberto,
-// o site solicita ao servidor que rode o arquivo liberarExpirados.js silenciosamente
 fetch("/.netlify/functions/liberarExpirados").catch(() => {});
 setInterval(() => {
   fetch("/.netlify/functions/liberarExpirados").catch(() => {});

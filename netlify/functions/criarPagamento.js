@@ -27,41 +27,39 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers, body: JSON.stringify({ erro: "Corpo inválido" }) };
   }
 
-  // AGORA RECEBEMOS UMA LISTA: numerosSelecionados (ex: [15, 42, 100])
-  const { numerosSelecionados, nome, whatsapp } = body;
+  // 1. Extração do e-mail real recebido do frontend
+  const { numerosSelecionados, nome, email, whatsapp } = body;
   const whatsappDigitos = String(whatsapp || "").replace(/\D/g, "");
 
   if (!numerosSelecionados || !Array.isArray(numerosSelecionados) || numerosSelecionados.length === 0) {
     return { statusCode: 400, headers, body: JSON.stringify({ erro: "Nenhum número selecionado." }) };
   }
-  if (!nome || whatsappDigitos.length < 10 || whatsappDigitos.length > 11) {
-    return { statusCode: 400, headers, body: JSON.stringify({ erro: "Preencha nome e WhatsApp válido." }) };
+  
+  // 2. Validação atualizada exigindo o e-mail
+  if (!nome || !email || whatsappDigitos.length < 10 || whatsappDigitos.length > 11) {
+    return { statusCode: 400, headers, body: JSON.stringify({ erro: "Preencha nome, e-mail e WhatsApp válido." }) };
   }
 
   const db = inicializarFirebase();
   const docRef = db.collection("sorteio").doc("reservas");
 
-  // MULTIPLICA O VALOR: R$ 2,00 vezes a quantidade de números
   const valorTotal = PRECO_NUMERO * numerosSelecionados.length;
 
   try {
-    // 1. Verifica e reserva todos os números de forma atômica
     await db.runTransaction(async (t) => {
       const snap = await t.get(docRef);
       const dados = snap.exists ? snap.data().numeros || {} : {};
 
-      // Primeiro verifica se TODOS os escolhidos estão realmente livres
       for (const num of numerosSelecionados) {
         const chave = String(num);
         const atual = dados[chave];
         const aindaValido = atual && atual.status === "pendente" && Date.now() - atual.criadoEm < MINUTOS_EXPIRACAO * 60 * 1000;
         
         if (atual && (atual.status === "pago" || aindaValido)) {
-          throw new Error(`INDISPONIVEL`); // Se 1 falhar, cancela tudo
+          throw new Error(`INDISPONIVEL`); 
         }
       }
 
-      // Se todos estiverem livres, faz a reserva prévia deles
       for (const num of numerosSelecionados) {
         dados[String(num)] = {
           nome,
@@ -74,17 +72,17 @@ exports.handler = async (event) => {
       t.set(docRef, { numeros: dados }, { merge: true });
     });
 
-    const emailSintetico = `${whatsappDigitos}@sorteio-brinde.app`;
-    const client = new MercadoPagoConfig({ accessToken: "APP_USR-6863463351667889-081412-3573fd4074c90472bfe75d4afca9e58c-321728277" });
+    // 3. Retorno ao uso seguro da variável de ambiente no Netlify
+    const client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
     const payment = new Payment(client);
 
-    // 2. Gera a cobrança Pix com o valor total somado
     const resultado = await payment.create({
       body: {
         transaction_amount: valorTotal,
         description: `Apoio Acadêmico - ${numerosSelecionados.length} cota(s)`,
         payment_method_id: "pix",
-        payer: { email: emailSintetico, first_name: nome },
+        // 4. Envio do e-mail real para o Mercado Pago
+        payer: { email: email, first_name: nome },
         notification_url: `${process.env.URL}/.netlify/functions/webhookPagamento`
       },
     });
@@ -92,7 +90,6 @@ exports.handler = async (event) => {
     const paymentId = resultado.id;
     const dadosPix = resultado.point_of_interaction.transaction_data;
 
-    // 3. Atualiza os números no Firebase atrelando todos eles ao mesmo ID de Pagamento
     const numerosParaAtualizar = {};
     for (const num of numerosSelecionados) {
       numerosParaAtualizar[String(num)] = {

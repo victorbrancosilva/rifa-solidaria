@@ -92,7 +92,7 @@ function atualizarBarraCheckout() {
   if (selecionados.size > 0) {
     checkoutBar.classList.add("visible");
     // Defina o PRECO_NUMERO aqui, caso não esteja definido globalmente em outro lugar
-    const PRECO_NUMERO = 5.00; // Ajuste para o valor real da sua cota
+    const PRECO_NUMERO = 2.00; // Ajuste para o valor real da sua cota
     const total = selecionados.size * PRECO_NUMERO;
     checkoutText.textContent = `${selecionados.size} número(s) - R$ ${total.toFixed(2).replace('.', ',')}`;
   } else {

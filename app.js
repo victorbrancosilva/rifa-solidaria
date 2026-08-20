@@ -205,7 +205,7 @@ checkoutBtn.addEventListener("click", () => {
     displayNums = `${numsArray.length} números selecionados`;
   }
   
-  const PRECO_NUMERO = 5.00; // Ajuste para o valor real da sua cota
+  const PRECO_NUMERO = 2.00; // Ajuste para o valor real da sua cota
   modalNumber.textContent = displayNums;
   modalPreco.textContent = `Total: R$ ${(numsArray.length * PRECO_NUMERO).toFixed(2).replace('.', ',')}`;
   
